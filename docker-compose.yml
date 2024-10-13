@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    ports:
+      - 80:80
+    volumes:
+      - ./src:/var/www/html
+    depends_on: 
+      - mysql
+      - php
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - 3306:3306
+    environment: 
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - app-network
+
+  php:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    # ports:
+    #   - 5173:5173    
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - app-network
+
+  composer:
+    build:
+      context: .
+      dockerfile: composer.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    volumes:
+      - ./src:/var/www/html
+    user: laravel
+    working_dir: /var/www/html
+    networks:
+      - app-network
+
+  npm:
+    image: node:current-alpine
+    volumes:
+      - ./src:/var/www/html
+    # ports:
+    #   - 5173:5173  
+    entrypoint: ["npm"]
+    working_dir: /var/www/html
+    networks:
+      - app-network
+
+  artisan:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+      args:
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+    volumes:
+      - ./src:/var/www/html
+    working_dir: /var/www/html
+    depends_on: 
+      - mysql
+    entrypoint: ["php", "/var/www/html/artisan"]
+    networks:
+      - app-network
+
+
+
+networks:
+  app-network:
+    driver: bridge    
